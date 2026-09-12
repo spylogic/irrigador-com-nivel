@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Irrigador com Nível</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="page">
+    <header class="topbar">
+      <h1>💧 Irrigador com Nível</h1>
+      <div class="conn" id="conn">
+        <span class="dot" id="connDot"></span>
+        <span id="connText">Conectando…</span>
+      </div>
+    </header>
+
+    <section class="tiles">
+      <div class="tile tile-tank">
+        <div class="tile-label">Nível da caixa d'água</div>
+        <div class="tank">
+          <div class="tank-fill" id="tankFill" style="height:0%"></div>
+          <div class="tank-value"><span id="tankPct">--%</span></div>
+        </div>
+        <div class="tile-sub" id="tankLitros">-- L de 5 L</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Temperatura</div>
+        <div class="tile-value" id="temp">--°C</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Umidade</div>
+        <div class="tile-value" id="umid">--%</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Água no reservatório da bomba</div>
+        <div class="badge" id="aguaBadge">--</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Bomba</h2>
+        <span class="badge" id="bombaBadge">--</span>
+      </div>
+      <p class="muted" id="modoTexto">Modo: --</p>
+      <div class="botoes">
+        <button id="btnLigar" class="btn btn-primary">Ligar agora</button>
+        <button id="btnDesligar" class="btn btn-secondary">Desligar</button>
+        <button id="btnAuto" class="btn btn-ghost">Voltar ao automático</button>
+      </div>
+      <p class="hint">O acionamento manual dura no máximo 2 minutos e depois volta
+        para o modo automático (horários programados) sozinho.</p>
+      <p class="alerta" id="alertaSemAgua" hidden>
+        ⚠️ Bomba bloqueada: sem água detectada no reservatório.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Horários automáticos (até 2 por dia)</h2>
+      <form id="formHorarios">
+        <div class="horario">
+          <label class="check">
+            <input type="checkbox" id="h1_enabled">
+            <span>Horário 1 ativo</span>
+          </label>
+          <input type="time" id="h1_time" value="06:30">
+          <label class="dur">Duração (min)
+            <input type="number" id="h1_dur" min="1" max="120" value="5">
+          </label>
+        </div>
+        <div class="horario">
+          <label class="check">
+            <input type="checkbox" id="h2_enabled">
+            <span>Horário 2 ativo</span>
+          </label>
+          <input type="time" id="h2_time" value="18:00">
+          <label class="dur">Duração (min)
+            <input type="number" id="h2_dur" min="1" max="120" value="5">
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar horários</button>
+        <span class="save-msg" id="saveMsg"></span>
+      </form>
+    </section>
+
+    <footer class="footer">
+      <p>Última atualização: <span id="lastUpdate">--</span></p>
+      <p class="danger">⚠️ Este sistema aciona uma bomba ligada à rede elétrica (AC).
+        Nunca abra ou mexa no módulo relé/fiação com a energia ligada.
+        Use disjuntor DR (diferencial residual) no circuito e mantenha toda a
+        parte elétrica longe de respingos de água.</p>
+    </footer>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
