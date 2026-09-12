@@ -68,7 +68,25 @@ const char* NTP_SERVER_2 = "a.st1.ntp.br";
 const unsigned long INTERVALO_BUSCA_CONFIG_MS = 15000UL;  // lê /config.json
 const unsigned long INTERVALO_ENVIO_STATUS_MS = 10000UL;  // escreve /status.json
 const unsigned long MANUAL_OVERRIDE_MAX_SEC   = 2UL * 60UL; // 2 min
-const float VOLUME_TOTAL_LITROS = 5.0; // mesmo valor usado no Nano para calibração
+
+// ---------------- Calibração da caixa d'água (configurável pelo site) -----
+// O Nano só manda a distância BRUTA (cm) lida pelo HC-SR04. É o ESP01 quem
+// transforma essa distância em % e litros, usando estas 3 medidas - que
+// podem ser alteradas a qualquer momento pelo card "Configuração da caixa
+// d'água" no dashboard (gravadas em /config/tank no Firebase), sem precisar
+// regravar nenhum dos dois firmwares. Os valores abaixo são só o ponto de
+// partida (mesmas medidas informadas para esta caixa de 5L) até a primeira
+// configuração salva pelo site chegar.
+struct TankConfig {
+  float volumeL     = 5.0;   // volume útil da caixa, em litros
+  float distFundoCm = 30.0;  // distância do sensor até o FUNDO (caixa vazia)
+  float distCheioCm = 5.0;   // distância do sensor até a água no nível MÁXIMO
+};
+TankConfig tank;
+
+// Zona morta de segurança perto do sensor (mesmo motivo do Nano: o HC-SR04
+// tem alcance mínimo de ~2cm).
+const float MARGEM_CHEIO_CM = 1.0;
 
 // ---------------- Estado local (cache) ----------------
 struct Horario {
@@ -88,8 +106,8 @@ bool horaSincronizada = false;
 unsigned long ultimaBuscaConfig = 0;
 unsigned long ultimoEnvioStatus = 0;
 
-// Últimos dados recebidos do Nano
-float ultNivel = -1, ultTemp = -99, ultUmid = -99;
+// Últimos dados recebidos do Nano (ultDistancia é a distância BRUTA em cm)
+float ultDistancia = -1, ultTemp = -99, ultUmid = -99;
 bool ultAgua = false, ultRele = false, ultBloqueado = false;
 bool dadosNanoValidos = false;
 
@@ -199,6 +217,42 @@ void buscarConfiguracao() {
       }
     }
   }
+
+  if (!doc["tank"].isNull()) {
+    float volumeL     = doc["tank"]["volume_l"]      | tank.volumeL;
+    float distFundoCm = doc["tank"]["dist_fundo_cm"] | tank.distFundoCm;
+    float distCheioCm = doc["tank"]["dist_cheio_cm"] | tank.distCheioCm;
+
+    // Validação básica: só aplica se fizer sentido físico (evita que um
+    // valor incompleto/errado no site derrube o cálculo do nível).
+    bool valido = (volumeL > 0) &&
+                  (distFundoCm > 0) && (distCheioCm >= 0) &&
+                  (distFundoCm - distCheioCm) > 1.0;
+
+    if (valido) {
+      tank.volumeL = volumeL;
+      tank.distFundoCm = distFundoCm;
+      tank.distCheioCm = distCheioCm;
+    }
+  }
+}
+
+// ---------------- Calcula nível % a partir da distância bruta do Nano -----
+// Usa as medidas de "tank" (configuráveis pelo dashboard), do mesmo jeito
+// que o Nano fazia localmente antes com valores fixos.
+float calcularNivelPercentual(float distanciaCm) {
+  if (distanciaCm < 0) return -1.0; // erro de leitura do sensor
+
+  float alturaUtilCm = tank.distFundoCm - tank.distCheioCm;
+  if (alturaUtilCm <= 0) return -1.0; // configuração inválida
+
+  if (distanciaCm <= (tank.distCheioCm - MARGEM_CHEIO_CM)) return 100.0;
+  if (distanciaCm >= tank.distFundoCm) return 0.0;
+
+  float nivel = (tank.distFundoCm - distanciaCm) / alturaUtilCm * 100.0;
+  if (nivel < 0) nivel = 0;
+  if (nivel > 100) nivel = 100;
+  return nivel;
 }
 
 // Se o override manual expirou, volta pro modo automático (e avisa o Firebase)
@@ -252,7 +306,7 @@ void processarLinhaNano(String linha) {
   linha.trim();
   if (!linha.startsWith("D:")) return;
 
-  // D:<nivel>,<temp>,<umid>,<agua>,<rele>,<bloqueado>
+  // D:<distancia_bruta_cm>,<temp>,<umid>,<agua>,<rele>,<bloqueado>
   linha.remove(0, 2);
   float valores[6];
   int idx = 0;
@@ -265,7 +319,7 @@ void processarLinhaNano(String linha) {
   }
   if (idx < 6) return;
 
-  ultNivel = valores[0];
+  ultDistancia = valores[0];
   ultTemp = valores[1];
   ultUmid = valores[2];
   ultAgua = (valores[3] != 0);
@@ -291,11 +345,15 @@ void lerSerialNano() {
 void enviarStatus(bool bombaComandada, unsigned long agoraEpoch) {
   if (!dadosNanoValidos) return;
 
-  float volumeLitros = (ultNivel >= 0) ? (ultNivel / 100.0 * VOLUME_TOTAL_LITROS) : -1;
+  // Recalcula sempre com o "tank" mais recente (pode ter chegado uma
+  // configuração nova do site desde a última leitura do Nano).
+  float nivelPct = calcularNivelPercentual(ultDistancia);
+  float volumeLitros = (nivelPct >= 0) ? (nivelPct / 100.0 * tank.volumeL) : -1;
 
   String json = "{";
-  json += "\"level_pct\":" + String(ultNivel, 1) + ",";
+  json += "\"level_pct\":" + String(nivelPct, 1) + ",";
   json += "\"volume_l\":" + String(volumeLitros, 2) + ",";
+  json += "\"distance_cm\":" + String(ultDistancia, 1) + ",";
   json += "\"temp_c\":" + String(ultTemp, 1) + ",";
   json += "\"humidity_pct\":" + String(ultUmid, 1) + ",";
   json += "\"water_present\":" + String(ultAgua ? "true" : "false") + ",";
