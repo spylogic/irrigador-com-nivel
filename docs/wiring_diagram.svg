@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <style>
+    .box { fill:#fcfcfb; stroke:#0b0b0b; stroke-width:2; }
+    .title { font-size:15px; font-weight:700; fill:#0b0b0b; }
+    .sub { font-size:11px; fill:#898781; }
+    .pin { font-size:12px; fill:#52514e; }
+    .lbl { font-size:12px; fill:#0b0b0b; }
+    .wire-sig  { stroke:#2a78d6; stroke-width:2.5; fill:none; }
+    .wire-pwr5 { stroke:#d03b3b; stroke-width:2.5; fill:none; }
+    .wire-pwr33{ stroke:#eb6834; stroke-width:2.5; fill:none; }
+    .wire-gnd  { stroke:#0b0b0b; stroke-width:2; fill:none; }
+    .wire-ac   { stroke:#4a3aa7; stroke-width:3.5; fill:none; stroke-dasharray:7 4; }
+    .dot { fill:#0b0b0b; }
+    .warn-box { fill:#fdeceb; stroke:#d03b3b; stroke-width:2; }
+    .warn-text { font-size:12px; fill:#8a1f1f; }
+    .res { fill:#fcfcfb; stroke:#0b0b0b; stroke-width:1.5; }
+  </style>
+
+  <!-- ================= LEGEND ================= -->
+  <g transform="translate(20,16)">
+    <rect class="box" x="0" y="0" width="360" height="118" rx="8"/>
+    <text class="title" x="12" y="22">Legenda</text>
+    <line class="wire-sig"  x1="12" y1="40" x2="50" y2="40"/><text class="lbl" x="58" y="44">Sinal / dados</text>
+    <line class="wire-pwr5" x1="12" y1="60" x2="50" y2="60"/><text class="lbl" x="58" y="64">Alimentação 5V</text>
+    <line class="wire-pwr33" x1="12" y1="80" x2="50" y2="80"/><text class="lbl" x="58" y="84">Alimentação 3.3V</text>
+    <line class="wire-gnd"  x1="12" y1="100" x2="50" y2="100"/><text class="lbl" x="58" y="104">GND (comum a todos)</text>
+    <line class="wire-ac"   x1="210" y1="40" x2="248" y2="40"/><text class="lbl" x="256" y="44">Rede AC</text>
+    <text class="lbl" x="210" y="64">(127/220V)</text>
+  </g>
+
+  <!-- ================= DHT11 ================= -->
+  <g>
+    <rect class="box" x="60" y="70" width="160" height="100" rx="8"/>
+    <text class="title" x="140" y="94" text-anchor="middle">DHT11</text>
+    <text class="sub" x="140" y="110" text-anchor="middle">temperatura / umidade</text>
+    <text class="pin" x="72" y="130">DATA</text><circle class="dot" cx="220" cy="126" r="3"/>
+    <text class="pin" x="72" y="150">VCC (5V)</text><circle class="dot" cx="220" cy="146" r="3"/>
+    <text class="pin" x="72" y="166">GND</text><circle class="dot" cx="220" cy="162" r="3"/>
+  </g>
+  <path class="wire-sig"  d="M220,126 H340 V140 H460"/>
+  <path class="wire-pwr5" d="M220,146 H330 V385 H460"/>
+  <path class="wire-gnd"  d="M220,162 H320 V405 H460"/>
+
+  <!-- ================= HC-SR04 ================= -->
+  <g>
+    <rect class="box" x="60" y="200" width="160" height="110" rx="8"/>
+    <text class="title" x="140" y="224" text-anchor="middle">HC-SR04</text>
+    <text class="sub" x="140" y="240" text-anchor="middle">ultrassônico (nível)</text>
+    <text class="pin" x="72" y="260">TRIG</text><circle class="dot" cx="220" cy="256" r="3"/>
+    <text class="pin" x="72" y="278">ECHO</text><circle class="dot" cx="220" cy="274" r="3"/>
+    <text class="pin" x="72" y="296">VCC (5V) / GND</text>
+  </g>
+  <path class="wire-sig" d="M220,256 H350 V175 H460"/>
+  <path class="wire-sig" d="M220,274 H360 V210 H460"/>
+  <path class="wire-pwr5" d="M220,290 H340 V387 H460"/>
+  <path class="wire-gnd"  d="M220,300 H330 V407 H460"/>
+
+  <!-- ================= HW-038 ================= -->
+  <g>
+    <rect class="box" x="60" y="330" width="160" height="100" rx="8"/>
+    <text class="title" x="140" y="354" text-anchor="middle">HW-038</text>
+    <text class="sub" x="140" y="370" text-anchor="middle">água no reservatório</text>
+    <text class="pin" x="72" y="390">S (analógico)</text><circle class="dot" cx="220" cy="386" r="3"/>
+    <text class="pin" x="72" y="410">VCC / GND</text>
+  </g>
+  <path class="wire-sig" d="M220,386 H370 V245 H460"/>
+  <path class="wire-pwr5" d="M220,402 H345 V389 H460"/>
+  <path class="wire-gnd"  d="M220,414 H335 V409 H460"/>
+
+  <!-- ================= ARDUINO NANO ================= -->
+  <g>
+    <rect class="box" x="460" y="60" width="200" height="360" rx="10"/>
+    <text class="title" x="560" y="30" text-anchor="middle">Arduino Nano (5V)</text>
+
+    <text class="pin" x="472" y="144">D2 → DHT11</text>
+    <text class="pin" x="472" y="179">D3 → TRIG</text>
+    <text class="pin" x="472" y="214">D4 → ECHO</text>
+    <text class="pin" x="472" y="249">A0 → HW-038</text>
+    <text class="pin" x="472" y="284">D5 → RELÉ IN</text>
+
+    <text class="pin" x="648" y="324" text-anchor="end">D8 (RX) ← ESP01 TX</text>
+    <text class="pin" x="648" y="354" text-anchor="end">D9 (TX) → ESP01 RX</text>
+
+    <text class="pin" x="472" y="389">5V</text>
+    <text class="pin" x="472" y="409">GND</text>
+
+    <circle class="dot" cx="460" cy="140" r="3"/>
+    <circle class="dot" cx="460" cy="175" r="3"/>
+    <circle class="dot" cx="460" cy="210" r="3"/>
+    <circle class="dot" cx="460" cy="245" r="3"/>
+    <circle class="dot" cx="460" cy="280" r="3"/>
+    <circle class="dot" cx="660" cy="320" r="3"/>
+    <circle class="dot" cx="660" cy="350" r="3"/>
+    <circle class="dot" cx="460" cy="385" r="3"/>
+    <circle class="dot" cx="460" cy="405" r="3"/>
+  </g>
+
+  <!-- ================= ESP01 ================= -->
+  <g>
+    <rect class="box" x="820" y="150" width="180" height="230" rx="10"/>
+    <text class="title" x="910" y="176" text-anchor="middle">ESP01 (ESP8266)</text>
+    <text class="sub" x="910" y="192" text-anchor="middle">firmware próprio (3.3V)</text>
+
+    <text class="pin" x="832" y="216">TX</text><circle class="dot" cx="820" cy="212" r="3"/>
+    <text class="pin" x="832" y="246">RX</text><circle class="dot" cx="820" cy="242" r="3"/>
+    <text class="pin" x="832" y="276">CH_PD / EN</text><circle class="dot" cx="820" cy="272" r="3"/>
+    <text class="pin" x="832" y="306">GPIO0</text><circle class="dot" cx="820" cy="302" r="3"/>
+    <text class="pin" x="832" y="336">VCC</text><circle class="dot" cx="820" cy="332" r="3"/>
+    <text class="pin" x="832" y="360">GND</text><circle class="dot" cx="820" cy="356" r="3"/>
+  </g>
+
+  <!-- ESP01 TX -> Nano D8 (direto) -->
+  <path class="wire-sig" d="M820,212 H750 V320 H660"/>
+  <!-- Nano D9 -> divisor 1k/2k -> ESP01 RX -->
+  <path class="wire-sig" d="M660,350 H700"/>
+  <rect class="res" x="700" y="338" width="60" height="24" rx="3"/>
+  <text class="lbl" x="730" y="354" text-anchor="middle" font-size="10">1k / 2k</text>
+  <path class="wire-sig" d="M760,350 H790 V242 H820"/>
+
+  <!-- pull-ups locais CH_PD e GPIO0 (resistor 10k para 3.3V) -->
+  <rect class="res" x="705" y="260" width="50" height="24" rx="3"/>
+  <text class="lbl" x="730" y="276" text-anchor="middle" font-size="10">10k</text>
+  <path class="wire-pwr33" d="M820,272 H755"/>
+  <rect class="res" x="705" y="290" width="50" height="24" rx="3"/>
+  <text class="lbl" x="730" y="306" text-anchor="middle" font-size="10">10k</text>
+  <path class="wire-pwr33" d="M820,302 H755"/>
+  <text class="sub" x="705" y="252" font-size="10">para 3.3V:</text>
+
+  <!-- fonte 3.3V separada -->
+  <g>
+    <rect class="box" x="1030" y="300" width="150" height="70" rx="8"/>
+    <text class="title" x="1105" y="326" text-anchor="middle" font-size="13">Fonte 3.3V</text>
+    <text class="sub" x="1105" y="344" text-anchor="middle">separada, min. 300mA</text>
+    <text class="sub" x="1105" y="360" text-anchor="middle">(não usar o 3.3V do Nano)</text>
+  </g>
+  <path class="wire-pwr33" d="M1030,332 H820"/>
+
+  <!-- GND comum: Nano GND <-> ESP01 GND <-> fonte 3.3V GND -->
+  <path class="wire-gnd" d="M460,405 V440 H900 V356 H820"/>
+  <path class="wire-gnd" d="M900,440 V350 H1030"/>
+  <text class="sub" x="470" y="455">GND comum (Nano + ESP01 + fonte 3.3V) - obrigatório para o serial funcionar</text>
+
+  <!-- ================= RELÉ HW-482 ================= -->
+  <g>
+    <rect class="box" x="460" y="560" width="200" height="120" rx="10"/>
+    <text class="title" x="560" y="586" text-anchor="middle">Módulo relé HW-482</text>
+    <text class="pin" x="472" y="612">IN</text><circle class="dot" cx="460" cy="608" r="3"/>
+    <text class="sub" x="472" y="634">VCC (5V) / GND</text>
+    <text class="sub" x="472" y="650">(mesmo barramento do Nano)</text>
+    <text class="pin" x="648" y="612" text-anchor="end">COM</text><circle class="dot" cx="660" cy="608" r="3"/>
+    <text class="pin" x="648" y="638" text-anchor="end">NO</text><circle class="dot" cx="660" cy="634" r="3"/>
+  </g>
+  <!-- Nano D5 -> relé IN (contorna a caixa do Nano por fora) -->
+  <path class="wire-sig" d="M460,280 H430 V608 H460"/>
+
+  <!-- ================= LADO AC / BOMBA ================= -->
+  <g>
+    <rect class="warn-box" x="820" y="520" width="360" height="220" rx="10"/>
+    <text class="title" x="1000" y="546" text-anchor="middle" fill="#8a1f1f">⚠ Lado de rede elétrica (AC 127/220V)</text>
+
+    <rect class="box" x="850" y="570" width="130" height="56" rx="6"/>
+    <text class="lbl" x="915" y="602" text-anchor="middle" font-size="12">Rede elétrica</text>
+
+    <rect class="box" x="1050" y="570" width="110" height="56" rx="6"/>
+    <text class="lbl" x="1105" y="602" text-anchor="middle" font-size="12">Bomba d'água</text>
+
+    <text class="warn-text" x="836" y="666">FASE: rede → COM → NO → bomba (linha de cima)</text>
+    <text class="warn-text" x="836" y="686">NEUTRO: rede → bomba direto (linha de baixo)</text>
+    <text class="warn-text" x="836" y="716">Use disjuntor DR. Mantenha esta parte longe de água.</text>
+  </g>
+
+  <!-- relé -> rede AC (FASE entra pelo COM, sai pelo NO até a bomba) -->
+  <path class="wire-ac" d="M660,608 H700 V598 H850"/>
+  <path class="wire-ac" d="M660,634 H900 V650 H1030 V600 H1050"/>
+
+  <!-- neutro direto rede -> bomba, sem passar pelo relé -->
+  <path class="wire-ac" d="M980,614 H1050"/>
+
+  <text x="20" y="900" font-size="12" fill="#898781">Diagrama esquemático (não é um layout físico real) - ver README para o passo a passo completo e a lista de peças.</text>
+</svg>
