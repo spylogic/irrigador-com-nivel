@@ -1,0 +1,2 @@
+# Não suba a senha do WiFi / configurações locais do ESP01
+firmware/esp01_irrigacao/config.h
