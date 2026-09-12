@@ -11,11 +11,11 @@
 // ====================================================================
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU-PROJETO.firebaseapp.com",
-  databaseURL: "https://SEU-PROJETO-default-rtdb.firebaseio.com",
-  projectId: "SEU-PROJETO",
-  storageBucket: "SEU-PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+    apiKey: "AIzaSyA_QcCHKKQA4LbsEyQPU3tZBJZdusi-m_M",
+    authDomain: "irrigador-com-nivel.firebaseapp.com",
+    databaseURL: "https://irrigador-com-nivel-default-rtdb.firebaseio.com",
+    projectId: "irrigador-com-nivel",
+    storageBucket: "irrigador-com-nivel.firebasestorage.app",
+    messagingSenderId: "609946838118",
+    appId: "1:609946838118:web:7efe21eeca4126a87bb9a7"
 };
