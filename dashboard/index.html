@@ -24,7 +24,8 @@
           <div class="tank-fill" id="tankFill" style="height:0%"></div>
           <div class="tank-value"><span id="tankPct">--%</span></div>
         </div>
-        <div class="tile-sub" id="tankLitros">-- L de 5 L</div>
+        <div class="tile-sub" id="tankLitros">-- L de -- L</div>
+        <div class="tile-sub" id="tankDist"></div>
       </div>
 
       <div class="tile">
@@ -59,6 +60,37 @@
       <p class="alerta" id="alertaSemAgua" hidden>
         ⚠️ Bomba bloqueada: sem água detectada no reservatório.
       </p>
+    </section>
+
+    <section class="card">
+      <h2>Configuração da caixa d'água</h2>
+      <p class="muted">Preencha as medidas da sua caixa para o nível e o volume
+        mostrados acima ficarem corretos. Funciona para qualquer caixa d'água -
+        não precisa regravar nenhum firmware ao mudar de caixa.</p>
+      <form id="formCaixa">
+        <div class="campo">
+          <label for="cx_volume">Volume útil da caixa (litros)</label>
+          <input type="number" id="cx_volume" min="0.1" step="0.1" value="5">
+        </div>
+        <div class="campo">
+          <label for="cx_fundo">Distância do fundo até o sensor (cm)</label>
+          <input type="number" id="cx_fundo" min="0.1" step="0.1" value="30">
+        </div>
+        <div class="campo">
+          <label for="cx_cheio">Distância da água no nível máximo até o sensor (cm)</label>
+          <input type="number" id="cx_cheio" min="0" step="0.1" value="5">
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar configuração da caixa</button>
+        <span class="save-msg" id="saveMsgCaixa"></span>
+      </form>
+      <p class="alerta" id="alertaCaixaInvalida" hidden>
+        ⚠️ A distância do fundo até o sensor precisa ser maior que a distância
+        da água no nível máximo (o sensor fica acima da água quando a caixa
+        está cheia).
+      </p>
+      <p class="hint">Essas medidas ficam salvas no Firebase e são usadas pelo
+        ESP01 para calcular o nível - o Nano só manda a distância bruta do
+        sensor.</p>
     </section>
 
     <section class="card">

@@ -12,6 +12,10 @@ const configRef = db.ref("/config");
 
 const el = (id) => document.getElementById(id);
 
+// Volume total configurado (vem de /config/tank; usado só para mostrar
+// "X L de Y L" no card de nível). Começa com o padrão até carregar do Firebase.
+let volumeTotalAtual = 5;
+
 // ---------------- Mostra o /status em tempo real ----------------
 statusRef.on("value", (snap) => {
   const s = snap.val() || {};
@@ -22,8 +26,12 @@ statusRef.on("value", (snap) => {
   el("tankFill").style.height = (nivelValido ? nivel : 0) + "%";
   el("tankPct").textContent = nivelValido ? nivel.toFixed(0) + "%" : "--";
   el("tankLitros").textContent = nivelValido
-    ? `${(s.volume_l ?? 0).toFixed(2)} L de 5 L`
+    ? `${(s.volume_l ?? 0).toFixed(2)} L de ${volumeTotalAtual.toFixed(1)} L`
     : "sem leitura do sensor";
+  el("tankDist").textContent =
+    typeof s.distance_cm === "number" && s.distance_cm >= 0
+      ? `sensor: ${s.distance_cm.toFixed(1)} cm`
+      : "";
 
   el("temp").textContent = (s.temp_c !== undefined && s.temp_c > -50)
     ? s.temp_c.toFixed(1) + "°C" : "--°C";
@@ -95,6 +103,16 @@ configRef.on("value", (snap) => {
     el("h2_time").value = horaParaInput(sched["2"].hour, sched["2"].minute);
     el("h2_dur").value = sched["2"].duration_min ?? 5;
   }
+
+  const tank = c.tank;
+  if (tank) {
+    if (typeof tank.volume_l === "number") {
+      el("cx_volume").value = tank.volume_l;
+      volumeTotalAtual = tank.volume_l;
+    }
+    if (typeof tank.dist_fundo_cm === "number") el("cx_fundo").value = tank.dist_fundo_cm;
+    if (typeof tank.dist_cheio_cm === "number") el("cx_cheio").value = tank.dist_cheio_cm;
+  }
 });
 
 function horaParaInput(h, m) {
@@ -140,6 +158,42 @@ el("formHorarios").addEventListener("submit", (ev) => {
   configRef.child("schedule").set(novoSchedule).then(() => {
     const msg = el("saveMsg");
     msg.textContent = "Horários salvos!";
+    setTimeout(() => { msg.textContent = ""; }, 3000);
+  });
+});
+
+// ---------------- Salvar configuração da caixa d'água ----------------
+// Essas 3 medidas são o que permite reaproveitar o mesmo firmware em
+// qualquer caixa d'água: o ESP01 lê esses valores do Firebase e calcula o
+// nível/volume a partir da distância bruta que o Nano manda.
+el("formCaixa").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+
+  const volumeL = Number(el("cx_volume").value);
+  const distFundoCm = Number(el("cx_fundo").value);
+  const distCheioCm = Number(el("cx_cheio").value);
+
+  const alerta = el("alertaCaixaInvalida");
+  const valido =
+    Number.isFinite(volumeL) && volumeL > 0 &&
+    Number.isFinite(distFundoCm) && distFundoCm > 0 &&
+    Number.isFinite(distCheioCm) && distCheioCm >= 0 &&
+    (distFundoCm - distCheioCm) > 1;
+
+  if (!valido) {
+    alerta.hidden = false;
+    return;
+  }
+  alerta.hidden = true;
+
+  configRef.child("tank").set({
+    volume_l: volumeL,
+    dist_fundo_cm: distFundoCm,
+    dist_cheio_cm: distCheioCm
+  }).then(() => {
+    volumeTotalAtual = volumeL;
+    const msg = el("saveMsgCaixa");
+    msg.textContent = "Configuração da caixa salva!";
     setTimeout(() => { msg.textContent = ""; }, 3000);
   });
 });

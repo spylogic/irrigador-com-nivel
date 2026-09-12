@@ -227,10 +227,27 @@ body {
   font-size: 0.9rem;
 }
 
-#formHorarios {
+#formHorarios,
+#formCaixa {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.campo input[type="number"] {
+  width: 100%;
+  max-width: 240px;
 }
 
 .horario {
