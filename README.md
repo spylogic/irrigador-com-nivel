@@ -23,8 +23,9 @@ Sistema de irrigação automática com:
 
 - Monitoramento do nível da caixa d'água (sensor ultrassônico HC-SR04)
 - Temperatura e umidade do ambiente (DHT11)
-- Verificação de água no reservatório da bomba (HW-038), evitando que a bomba
-  funcione a seco
+- Indicador de **Nível de Transbordo** (sensor HW-038, leitura analógica em
+  %) do reservatório de destino, com alarme "Rega Completa" aos 50% e
+  desligamento automático da bomba por segurança aos 75%
 - Acionamento da bomba de irrigação (módulo relé HW-482)
 - Dashboard web com acesso de qualquer lugar do mundo, hospedado no GitHub
   Pages, com atualização em tempo real via Firebase
@@ -62,9 +63,18 @@ Além disso você vai precisar de:
 ```
 
 - O **Nano** lê os sensores e controla o relé. Ele tem as travas de
-  segurança: só liga a bomba se houver água no reservatório, nunca deixa a
-  bomba ligada continuamente por mais de 2 minutos, e desliga sozinho se
-  perder a comunicação com o ESP01 por mais de 60 segundos.
+  segurança: nunca deixa a bomba ligada continuamente por mais de 2 minutos,
+  desliga sozinho se perder a comunicação com o ESP01 por mais de 60
+  segundos, e desliga automaticamente quando o **Nível de Transbordo**
+  (HW-038) atinge 75%, evitando transbordamento do reservatório de destino.
+
+  > ⚠️ **Sobre a proteção contra "bomba a seco"**: este projeto usava o
+  > HW-038 para isso antes. Ele agora virou um indicador de **Nível de
+  > Transbordo** (percentual), e essa proteção de "bomba a seco" foi
+  > **removida** - foi uma troca aceita para ganhar o indicador
+  > percentual e as duas travas novas (alarme aos 50% e desligamento aos
+  > 75%). Se quiser recuperar a proteção contra funcionamento a seco, seria
+  > necessário um segundo sensor dedicado a isso.
 
   > ⚠️ **Atenção com essa trava de 2 minutos**: se um horário programado (ou
   > o botão "Ligar agora") pedir mais de 2 minutos seguidos de irrigação, a
@@ -96,7 +106,7 @@ Resumo dos pinos do Nano:
 | D2 | DHT11 (DATA) |
 | D3 | HC-SR04 (TRIG) |
 | D4 | HC-SR04 (ECHO) |
-| A0 | HW-038 (S / saída analógica) |
+| A0 | HW-038 (S / saída analógica) - Nível de Transbordo |
 | D5 | HW-482 (IN) |
 | D8 | ESP01 TX (direto) |
 | D9 | ESP01 RX (através do divisor 1k/2k) |
@@ -154,10 +164,10 @@ parte elétrica a sério:
   "distance_cm": 11.5,      // distância bruta lida pelo HC-SR04 (útil para calibrar)
   "temp_c": 24.5,
   "humidity_pct": 63.0,
-  "water_present": true,    // tem água no reservatório da bomba?
+  "overflow_pct": 32.0,     // Nível de Transbordo (HW-038), em % (0-100)
   "pump_on": false,         // relé realmente ligado?
   "pump_commanded": false,  // ESP01 mandou ligar?
-  "blocked_no_water": false,// bomba bloqueada por falta de água?
+  "blocked_overflow": false,// bomba desligada por segurança (transbordo >= 75%)?
   "mode": "auto",           // "auto" | "on" | "off"
   "wifi_ok": true,
   "last_update": 1731000000 // epoch (segundos)
@@ -223,8 +233,15 @@ O ESP01 vai rodar um sketch próprio (não o firmware AT de fábrica).
      aparece no **dashboard** usa as medidas do card "Configuração da caixa
      d'água" do site, não estas constantes - então normalmente não precisa
      mexer aqui, mesmo trocando de caixa d'água depois.
-   - `LIMIAR_AGUA` (limiar do HW-038 - teste o sensor seco e molhado com o
-     Monitor Serial aberto e ajuste esse número)
+   - `LEITURA_SECA_TRANSBORDO` / `LEITURA_CHEIA_TRANSBORDO` (calibração do
+     Nível de Transbordo do HW-038 - teste o sensor seco e depois totalmente
+     molhado com o Monitor Serial aberto, anote as duas leituras brutas
+     (0-1023) e ajuste esses números)
+   - `TRANSBORDO_LIMIAR_ALARME_PCT` (padrão 50%): a partir de que % o
+     dashboard mostra o alarme "Rega Completa"
+   - `TRANSBORDO_LIMIAR_DESLIGA_PCT` (padrão 75%): a partir de que % a bomba
+     é desligada automaticamente por segurança (só liga de novo depois de um
+     comando explícito de "desligar" vindo do site)
 4. Selecione a placa "Arduino Nano" (e o processador correto - ATmega328P
    "Old Bootloader" em placas clone, se não conseguir gravar) e grave.
 5. **Teste o sentido do relé antes de ligar a bomba de verdade:** com a
@@ -293,9 +310,15 @@ sensíveis), mas se quiser reforçar depois:
   água e ajuste `SENSOR_ATE_NIVEL_MAX_CM` / `ALTURA_UTIL_CM`; o HC-SR04 tem
   alcance mínimo de ~2cm, então se o sensor ficar muito perto da água pode
   dar leitura errática.
-- **Bomba não liga pelo site**: veja no dashboard se `blocked_no_water`
-  está ativo (sem água no reservatório) e se o `mode` está em "auto" com
-  nenhum horário cobrindo o horário atual - tente o botão "Ligar agora".
+- **Bomba não liga pelo site**: veja no dashboard se `blocked_overflow`
+  está ativo (Nível de Transbordo em 75% ou mais) e se o `mode` está em
+  "auto" com nenhum horário cobrindo o horário atual - tente o botão
+  "Ligar agora". Se a bomba desligou por transbordo, ela só liga de novo
+  depois de um comando explícito de "desligar" (botão "Desligar" ou
+  "Voltar ao automático").
+- **Nível de Transbordo sempre 0% ou 100%**: confira a leitura bruta do
+  HW-038 no Monitor Serial (seco e molhado) e ajuste
+  `LEITURA_SECA_TRANSBORDO` / `LEITURA_CHEIA_TRANSBORDO`.
 - **Dashboard não atualiza**: confira se `firebase-config.js` está com os
   dados corretos e se as regras do Realtime Database permitem leitura.
 
