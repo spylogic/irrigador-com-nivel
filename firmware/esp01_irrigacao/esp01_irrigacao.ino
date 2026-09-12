@@ -6,7 +6,7 @@
     - Conectar no WiFi
     - Pegar a hora certa pela internet (NTP)
     - Ler o status enviado pelo Nano (nível, temperatura, umidade,
-      água no reservatório, estado do relé) e publicar no Firebase
+      Nível de Transbordo, estado do relé) e publicar no Firebase
       Realtime Database, pra o site poder mostrar em tempo real
     - Ler do Firebase o comando manual (botão do site) e os até 2
       horários programados, decidir se a bomba deve ligar agora, e
@@ -106,9 +106,10 @@ bool horaSincronizada = false;
 unsigned long ultimaBuscaConfig = 0;
 unsigned long ultimoEnvioStatus = 0;
 
-// Últimos dados recebidos do Nano (ultDistancia é a distância BRUTA em cm)
-float ultDistancia = -1, ultTemp = -99, ultUmid = -99;
-bool ultAgua = false, ultRele = false, ultBloqueado = false;
+// Últimos dados recebidos do Nano (ultDistancia é a distância BRUTA em cm;
+// ultTransbordoPct é o Nível de Transbordo do HW-038, já em %)
+float ultDistancia = -1, ultTemp = -99, ultUmid = -99, ultTransbordoPct = -1;
+bool ultRele = false, ultBloqueado = false;
 bool dadosNanoValidos = false;
 
 String bufferNano = "";
@@ -306,7 +307,7 @@ void processarLinhaNano(String linha) {
   linha.trim();
   if (!linha.startsWith("D:")) return;
 
-  // D:<distancia_bruta_cm>,<temp>,<umid>,<agua>,<rele>,<bloqueado>
+  // D:<distancia_bruta_cm>,<temp>,<umid>,<transbordo_pct>,<rele>,<bloqueado>
   linha.remove(0, 2);
   float valores[6];
   int idx = 0;
@@ -322,7 +323,7 @@ void processarLinhaNano(String linha) {
   ultDistancia = valores[0];
   ultTemp = valores[1];
   ultUmid = valores[2];
-  ultAgua = (valores[3] != 0);
+  ultTransbordoPct = valores[3];
   ultRele = (valores[4] != 0);
   ultBloqueado = (valores[5] != 0);
   dadosNanoValidos = true;
@@ -356,10 +357,10 @@ void enviarStatus(bool bombaComandada, unsigned long agoraEpoch) {
   json += "\"distance_cm\":" + String(ultDistancia, 1) + ",";
   json += "\"temp_c\":" + String(ultTemp, 1) + ",";
   json += "\"humidity_pct\":" + String(ultUmid, 1) + ",";
-  json += "\"water_present\":" + String(ultAgua ? "true" : "false") + ",";
+  json += "\"overflow_pct\":" + String(ultTransbordoPct, 1) + ",";
   json += "\"pump_on\":" + String(ultRele ? "true" : "false") + ",";
   json += "\"pump_commanded\":" + String(bombaComandada ? "true" : "false") + ",";
-  json += "\"blocked_no_water\":" + String(ultBloqueado ? "true" : "false") + ",";
+  json += "\"blocked_overflow\":" + String(ultBloqueado ? "true" : "false") + ",";
   json += "\"mode\":\"" + manualCommand + "\",";
   json += "\"wifi_ok\":" + String(wifiOk ? "true" : "false") + ",";
   json += "\"last_update\":" + String(agoraEpoch);
