@@ -1,5 +1,19 @@
 # Irrigador com Nível
 
+> ✅ **Status deste projeto**: o Firebase (Realtime Database) e o dashboard no
+> GitHub Pages já estão configurados e publicados:
+> - Repositório: https://github.com/spylogic/irrigador-com-nivel
+> - Dashboard ao vivo: https://spylogic.github.io/irrigador-com-nivel/
+> - Projeto Firebase: `irrigador-com-nivel` (plano Spark, banco em `us-central1`)
+> - URL do Realtime Database: `https://irrigador-com-nivel-default-rtdb.firebaseio.com`
+> - Banco em **modo de teste** (regras abertas) - expira em **2026-10-12**;
+>   veja "Segurança do Firebase" abaixo para tornar as regras permanentes
+>   antes dessa data.
+>
+> O que falta para o sistema funcionar de ponta a ponta é só a parte física:
+> montar o circuito, gravar os dois firmwares (seções 2 e 3 abaixo) e criar o
+> `config.h` do ESP01 com a `FIREBASE_DATABASE_URL` acima.
+
 Sistema de irrigação automática com:
 
 - Monitoramento do nível da caixa d'água (sensor ultrassônico HC-SR04)
@@ -106,6 +120,9 @@ parte elétrica a sério:
 
 ## 1. Configurar o Firebase (Realtime Database)
 
+> ✅ **Já feito** para este projeto - pode pular para a seção 2. Os dados
+> abaixo ficam só como referência (e caso precise recriar algo um dia).
+
 1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
    e crie um novo projeto (pode ser gratuito, plano Spark).
 2. No menu lateral, vá em **Build > Realtime Database** e clique em
@@ -115,11 +132,13 @@ parte elétrica a sério:
    comandos, sem informação sensível. Depois que tudo estiver funcionando,
    você pode restringir as regras (ver seção "Segurança do Firebase" abaixo).
 4. Anote a **URL do banco** (aparece no topo da página do Realtime Database,
-   algo como `https://SEU-PROJETO-default-rtdb.firebaseio.com`).
+   algo como `https://SEU-PROJETO-default-rtdb.firebaseio.com`). Neste
+   projeto: `https://irrigador-com-nivel-default-rtdb.firebaseio.com`.
 5. Em **Configurações do projeto (engrenagem) > Geral**, role até "Seus
    apps", clique em `</>` (Web) para registrar um app e copie o objeto
    `firebaseConfig` (apiKey, authDomain, databaseURL, etc.) - vai usar isso
-   no dashboard.
+   no dashboard. Neste projeto o `dashboard/firebase-config.js` já está
+   preenchido com esses valores e publicado no GitHub Pages.
 
 ### Estrutura de dados usada
 
@@ -196,6 +215,13 @@ O ESP01 vai rodar um sketch próprio (não o firmware AT de fábrica).
 
 ## 4. Publicar o dashboard no GitHub Pages
 
+> ✅ **Já feito** para este projeto:
+> - Repositório: https://github.com/spylogic/irrigador-com-nivel
+> - Dashboard ao vivo: https://spylogic.github.io/irrigador-com-nivel/
+>
+> Os passos abaixo descrevem como foi feito (e servem de referência para
+> atualizar o site no futuro ou recriar em outro repositório).
+
 1. Edite `dashboard/firebase-config.js` com os dados do seu app Firebase
    (passo 1.5 acima).
 2. Crie um repositório novo no GitHub (pode ser público - lembre-se que o
@@ -211,11 +237,19 @@ O ESP01 vai rodar um sketch próprio (não o firmware AT de fábrica).
    git remote add origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
    git push -u origin main
    ```
-4. No GitHub, vá em **Settings > Pages**, em "Branch" escolha `main` e a
-   pasta `/dashboard` (ou `/root` se você preferir mover os arquivos do
-   dashboard pra raiz do repositório), salve.
-5. Em alguns minutos o site fica disponível em
+4. O GitHub Pages padrão ("Deploy from a branch") só publica a raiz do
+   repositório ou a pasta `/docs` - não uma pasta arbitrária como
+   `/dashboard`. Por isso este projeto usa um workflow do **GitHub Actions**
+   (`.github/workflows/pages.yml`, já incluído) que publica especificamente
+   a pasta `dashboard/`. Para ativar: em **Settings > Pages**, em "Source"
+   escolha **GitHub Actions** (em vez de "Deploy from a branch"). O workflow
+   roda automaticamente a cada push na branch `main`, ou manualmente em
+   **Actions > Publicar dashboard no GitHub Pages > Run workflow**.
+5. Em alguns minutos (geralmente menos de 1 minuto) o site fica disponível em
    `https://SEU_USUARIO.github.io/SEU_REPOSITORIO/`.
+6. Para atualizar o site depois de qualquer mudança nos arquivos de
+   `dashboard/`, basta commitar/subir a mudança para `main` - o Actions
+   republica sozinho.
 
 ## Segurança do Firebase (depois que tudo estiver funcionando)
 
