@@ -5,16 +5,23 @@
   Função deste Nano:
     - Ler o nível da caixa d'água (HC-SR04)
     - Ler temperatura e umidade (DHT11)
-    - Ler se há água no último recipiente / reservatório da bomba (HW-038)
+    - Ler o Nível de Transbordo (HW-038), como indicador percentual
+      (0-100%) de quanto o reservatório de destino/transbordo está cheio
     - Acionar o relé da bomba (HW-482), com travas de segurança
     - Conversar com o ESP01 por serial (SoftwareSerial), que é quem
       fala com a internet/Firebase e decide QUANDO ligar a bomba
       (botão do site ou horário programado)
 
   O Nano NUNCA decide "por que" ligar a bomba - isso é do ESP01/site.
-  O Nano decide "se pode" ligar (trava de água e trava de tempo máximo),
-  o que é essencial para não estragar a bomba e não alagar nada caso
-  a internet/ESP01 trave.
+  O Nano decide "se pode" ligar (trava de tempo máximo e trava de
+  transbordo), o que é essencial para não estragar a bomba e não
+  alagar nada caso a internet/ESP01 trave.
+
+  Sobre o HW-038 (Nível de Transbordo): este sensor não é mais usado como
+  trava de "bomba a seco". Ele virou um indicador de transbordo - ao
+  chegar em 50% o dashboard mostra o alarme "Rega Completa", e ao chegar
+  em 75% a bomba é desligada automaticamente por segurança (só liga de
+  novo depois de um comando explícito de "desligar" vindo do site).
 
   Bibliotecas necessárias (Gerenciador de Bibliotecas do Arduino IDE):
     - "DHT sensor library" (Adafruit)
@@ -27,7 +34,7 @@
     D2  -> DHT11 DATA
     D3  -> HC-SR04 TRIG
     D4  -> HC-SR04 ECHO
-    A0  -> HW-038 (pino "S" / saída analógica)
+    A0  -> HW-038 (pino "S" / saída analógica) - indicador de Nível de Transbordo
     D5  -> HW-482 IN (sinal do relé)
     D8  -> SoftwareSerial RX  <- ESP01 TX (ligação direta)
     D9  -> SoftwareSerial TX  -> divisor de tensão (1k+2k) -> ESP01 RX
@@ -74,6 +81,24 @@ const float VOLUME_TOTAL_LITROS     = 5.0;   // volume da caixa (aprox., assume 
 // Zona morta de segurança perto do sensor (o HC-SR04 tem alcance mínimo
 // de ~2 cm; como o nível cheio já fica a 5 cm, deixamos uma margem).
 const float MARGEM_CHEIO_CM = 1.0;
+
+// ---------------- Calibração do Nível de Transbordo (HW-038) ----------------
+// O HW-038 é um sensor resistivo: conforme a água sobe e cobre mais
+// trilhas, a leitura analógica no pino "S" varia de forma gradual - por
+// isso dá pra usar como indicador de PERCENTUAL, não só um sim/não.
+// Para calibrar: abra o Monitor Serial, anote a leitura bruta (0-1023)
+// com o sensor seco e depois totalmente submerso na altura máxima que
+// você quer monitorar, e ajuste os dois valores abaixo.
+const int LEITURA_SECA_TRANSBORDO  = 200;  // leitura aproximada com o sensor seco
+const int LEITURA_CHEIA_TRANSBORDO = 800;  // leitura aproximada com o sensor totalmente molhado
+
+// A partir de que % o dashboard mostra o alarme "Rega Completa"
+const float TRANSBORDO_LIMIAR_ALARME_PCT = 50.0;
+
+// A partir de que % a bomba é desligada automaticamente por segurança
+// (evita transbordamento). Só liga de novo depois de um comando explícito
+// de "desligar" vindo do ESP01 (mesma lógica da trava de tempo máximo).
+const float TRANSBORDO_LIMIAR_DESLIGA_PCT = 75.0;
 
 // ---------------- Relé / bomba: travas de segurança ----------------
 // Alguns módulos de relé de 1 canal (como o HW-482) acionam em NÍVEL
@@ -175,6 +200,16 @@ float calcularNivelPercentual(float distanciaCm) {
   return nivel;
 }
 
+// ---------------- Nível de Transbordo (HW-038), em % ----------------
+float calcularTransbordoPercentual(int leitura) {
+  int faixa = LEITURA_CHEIA_TRANSBORDO - LEITURA_SECA_TRANSBORDO;
+  if (faixa <= 0) return 0;
+  float pct = (float)(leitura - LEITURA_SECA_TRANSBORDO) / faixa * 100.0;
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return pct;
+}
+
 // ---------------- Processa uma linha recebida do ESP01 ----------------
 // Formato esperado: "C:0" ou "C:1"
 void processarLinhaEsp(String linha) {
@@ -207,14 +242,17 @@ void lerSerialEsp() {
 }
 
 // ---------------- Aplica a lógica de segurança e aciona o relé ----------------
-void atualizarRele(bool aguaPresente) {
+void atualizarRele(float transbordoPct) {
   unsigned long agora = millis();
+  bool estavaLigada = releLigado; // captura ANTES de qualquer mudança nesta chamada
 
   bool semComandoRecente =
       (ultimoComandoRecebidoEm == 0) ||
       (agora - ultimoComandoRecebidoEm > TIMEOUT_COMUNICACAO_MS);
 
-  bool podeLigar = comandoDesejado && aguaPresente && !semComandoRecente && !precisaTransicaoParaRearmar;
+  bool bloqueadoPorTransbordo = (transbordoPct >= TRANSBORDO_LIMIAR_DESLIGA_PCT);
+
+  bool podeLigar = comandoDesejado && !semComandoRecente && !precisaTransicaoParaRearmar && !bloqueadoPorTransbordo;
 
   if (podeLigar && !releLigado) {
     // Liga a bomba
@@ -233,6 +271,15 @@ void atualizarRele(bool aguaPresente) {
     digitalWrite(PIN_RELE, RELE_NIVEL_ATIVO == HIGH ? LOW : HIGH);
     precisaTransicaoParaRearmar = true; // só liga de novo depois de um C:0 explícito
     Serial.println(F("[SEGURANCA] Tempo maximo ligado atingido - bomba desligada."));
+  }
+
+  // Trava de Nível de Transbordo: se a bomba estava ligada e o nível
+  // cruzou o limiar agora, exige um comando explícito de "desligar" do
+  // ESP01 antes de religar (evita ligar/desligar repetidamente perto do
+  // limiar - "chattering" do relé).
+  if (estavaLigada && bloqueadoPorTransbordo) {
+    precisaTransicaoParaRearmar = true;
+    Serial.println(F("[SEGURANCA] Nivel de transbordo atingido - bomba desligada."));
   }
 
   // Sem comunicação com o ESP01 -> desliga por segurança
@@ -257,17 +304,16 @@ void loop() {
     float umidade = dht.readHumidity();
     bool dhtOk = !(isnan(temperatura) || isnan(umidade));
 
-    int leituraAgua = analogRead(PIN_AGUA_AO);
-    // Ajuste esse limiar testando o sensor seco e depois na água.
-    const int LIMIAR_AGUA = 500;
-    bool aguaPresente = (leituraAgua > LIMIAR_AGUA);
+    int leituraTransbordo = analogRead(PIN_AGUA_AO);
+    float transbordoPct = calcularTransbordoPercentual(leituraTransbordo);
 
-    atualizarRele(aguaPresente);
+    atualizarRele(transbordoPct);
 
-    bool bloqueadoSemAgua = comandoDesejado && !aguaPresente;
+    bool bloqueadoPorTransbordo = comandoDesejado &&
+        (transbordoPct >= TRANSBORDO_LIMIAR_DESLIGA_PCT || precisaTransicaoParaRearmar);
 
     // Monta e envia a linha de status pro ESP01:
-    // D:<distancia_bruta_cm>,<temp>,<umid>,<agua 0/1>,<rele 0/1>,<bloqueado 0/1>
+    // D:<distancia_bruta_cm>,<temp>,<umid>,<transbordo_pct>,<rele 0/1>,<bloqueado 0/1>
     // A distância bruta (sem transformar em %) é o que permite o ESP01
     // calcular o nível usando as medidas configuradas no dashboard.
     espSerial.print("D:");
@@ -277,21 +323,21 @@ void loop() {
     espSerial.print(",");
     espSerial.print(dhtOk ? umidade : -99, 1);
     espSerial.print(",");
-    espSerial.print(aguaPresente ? 1 : 0);
+    espSerial.print(transbordoPct, 1);
     espSerial.print(",");
     espSerial.print(releLigado ? 1 : 0);
     espSerial.print(",");
-    espSerial.print(bloqueadoSemAgua ? 1 : 0);
+    espSerial.print(bloqueadoPorTransbordo ? 1 : 0);
     espSerial.print("\n");
 
     // Debug via USB (nivel local, só para conferência - o dashboard usa o
     // cálculo do ESP01 com as medidas configuradas no site)
     Serial.print(F("Distancia: ")); Serial.print(distancia);
     Serial.print(F("cm  Nivel(local): ")); Serial.print(nivelPct);
+    Serial.print(F("%  Transbordo: ")); Serial.print(transbordoPct);
     Serial.print(F("%  Temp: ")); Serial.print(temperatura);
     Serial.print(F("  Umid: ")); Serial.print(umidade);
-    Serial.print(F("  Agua: ")); Serial.print(aguaPresente);
     Serial.print(F("  Rele: ")); Serial.print(releLigado);
-    Serial.print(F("  Bloqueado: ")); Serial.println(bloqueadoSemAgua);
+    Serial.print(F("  Bloqueado: ")); Serial.println(bloqueadoPorTransbordo);
   }
 }
