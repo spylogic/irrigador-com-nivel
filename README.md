@@ -13,6 +13,11 @@
 > O que falta para o sistema funcionar de ponta a ponta é só a parte física:
 > montar o circuito, gravar os dois firmwares (seções 2 e 3 abaixo) e criar o
 > `config.h` do ESP01 com a `FIREBASE_DATABASE_URL` acima.
+>
+> As medidas da caixa d'água (volume útil, distância do fundo e distância no
+> nível máximo) **não precisam mais ser ajustadas no firmware** - agora dá
+> pra configurar direto pelo dashboard, no card "Configuração da caixa
+> d'água", o que permite reaproveitar o mesmo firmware em qualquer caixa.
 
 Sistema de irrigação automática com:
 
@@ -144,8 +149,9 @@ parte elétrica a sério:
 
 ```jsonc
 /status: {
-  "level_pct": 78.4,        // nível da caixa em %
-  "volume_l": 3.92,         // litros (aprox., caixa de 5L)
+  "level_pct": 78.4,        // nível da caixa em %, já calculado com o /config/tank atual
+  "volume_l": 3.92,         // litros, calculado a partir de level_pct e tank.volume_l
+  "distance_cm": 11.5,      // distância bruta lida pelo HC-SR04 (útil para calibrar)
   "temp_c": 24.5,
   "humidity_pct": 63.0,
   "water_present": true,    // tem água no reservatório da bomba?
@@ -162,9 +168,20 @@ parte elétrica a sério:
   "schedule": {
     "1": { "enabled": true,  "hour": 6,  "minute": 30, "duration_min": 5 },
     "2": { "enabled": false, "hour": 18, "minute": 0,  "duration_min": 5 }
+  },
+  "tank": {
+    "volume_l": 5,          // volume útil da caixa, em litros
+    "dist_fundo_cm": 30,    // distância do sensor até o fundo (caixa vazia)
+    "dist_cheio_cm": 5      // distância do sensor até a água no nível máximo
   }
 }
 ```
+
+O card **"Configuração da caixa d'água"** no dashboard escreve direto em
+`/config/tank` - é o que permite usar o mesmo firmware em qualquer caixa
+d'água, sem precisar regravar Nano nem ESP01: o Nano só manda a distância
+bruta (`distance_cm`) e o ESP01 é quem transforma isso em `level_pct` e
+`volume_l`, usando as 3 medidas que estiverem salvas ali.
 
 ## 2. Gravar o firmware do ESP01
 
@@ -201,9 +218,11 @@ O ESP01 vai rodar um sketch próprio (não o firmware AT de fábrica).
    Sensor** (ambas de Adafruit) pelo Gerenciador de Bibliotecas.
 2. Abra `firmware/nano_irrigacao/nano_irrigacao.ino`.
 3. Se necessário, ajuste as constantes no topo do arquivo:
-   - `SENSOR_ATE_NIVEL_MAX_CM` (já configurado para 5 cm, conforme sua medida)
-   - `ALTURA_UTIL_CM` (já configurado para 25 cm)
-   - `VOLUME_TOTAL_LITROS` (já configurado para 5 L)
+   - `SENSOR_ATE_NIVEL_MAX_CM`, `ALTURA_UTIL_CM`, `VOLUME_TOTAL_LITROS`: usadas
+     só para o nível mostrado no Monitor Serial (debug local). O nível que
+     aparece no **dashboard** usa as medidas do card "Configuração da caixa
+     d'água" do site, não estas constantes - então normalmente não precisa
+     mexer aqui, mesmo trocando de caixa d'água depois.
    - `LIMIAR_AGUA` (limiar do HW-038 - teste o sensor seco e molhado com o
      Monitor Serial aberto e ajuste esse número)
 4. Selecione a placa "Arduino Nano" (e o processador correto - ATmega328P
