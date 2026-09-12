@@ -39,8 +39,9 @@
       </div>
 
       <div class="tile">
-        <div class="tile-label">Água no reservatório da bomba</div>
-        <div class="badge" id="aguaBadge">--</div>
+        <div class="tile-label">Nível de Transbordo</div>
+        <div class="tile-value" id="transbordoPct">--%</div>
+        <div class="badge" id="transbordoBadge">--</div>
       </div>
     </section>
 
@@ -57,8 +58,11 @@
       </div>
       <p class="hint">O acionamento manual dura no máximo 2 minutos e depois volta
         para o modo automático (horários programados) sozinho.</p>
-      <p class="alerta" id="alertaSemAgua" hidden>
-        ⚠️ Bomba bloqueada: sem água detectada no reservatório.
+      <p class="alerta alerta-info" id="alertaRegaCompleta" hidden>
+        ✅ Rega Completa: Nível de Transbordo atingiu 50%.
+      </p>
+      <p class="alerta" id="alertaTransbordo" hidden>
+        ⚠️ Bomba desligada por segurança: Nível de Transbordo atingiu 75%.
       </p>
     </section>
 

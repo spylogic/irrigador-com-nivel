@@ -38,14 +38,32 @@ statusRef.on("value", (snap) => {
   el("umid").textContent = (s.humidity_pct !== undefined && s.humidity_pct >= 0)
     ? s.humidity_pct.toFixed(0) + "%" : "--%";
 
-  const aguaBadge = el("aguaBadge");
-  if (s.water_present) {
-    aguaBadge.textContent = "OK - água detectada";
-    aguaBadge.className = "badge good";
+  // Nível de Transbordo (HW-038): indicador percentual (0-100%).
+  // < 50%   -> Normal
+  // 50-75%  -> Rega Completa (alarme informativo, ainda não desliga a bomba)
+  // >= 75%  -> Transbordando (bomba desligada por segurança)
+  const transbordo = typeof s.overflow_pct === "number" ? s.overflow_pct : -1;
+  const transbordoValido = transbordo >= 0;
+
+  el("transbordoPct").textContent = transbordoValido ? transbordo.toFixed(0) + "%" : "--%";
+
+  const transbordoBadge = el("transbordoBadge");
+  if (!transbordoValido) {
+    transbordoBadge.textContent = "--";
+    transbordoBadge.className = "badge";
+  } else if (transbordo >= 75) {
+    transbordoBadge.textContent = "Transbordando";
+    transbordoBadge.className = "badge critical";
+  } else if (transbordo >= 50) {
+    transbordoBadge.textContent = "Rega completa";
+    transbordoBadge.className = "badge warning";
   } else {
-    aguaBadge.textContent = "Sem água";
-    aguaBadge.className = "badge critical";
+    transbordoBadge.textContent = "Normal";
+    transbordoBadge.className = "badge good";
   }
+
+  el("alertaRegaCompleta").hidden = !(transbordoValido && transbordo >= 50 && transbordo < 75);
+  el("alertaTransbordo").hidden = !s.blocked_overflow;
 
   const bombaBadge = el("bombaBadge");
   if (s.pump_on) {
@@ -59,8 +77,6 @@ statusRef.on("value", (snap) => {
   el("modoTexto").textContent =
     "Modo: " + (s.mode === "on" ? "manual (ligada)" :
                 s.mode === "off" ? "manual (desligada)" : "automático (horários)");
-
-  el("alertaSemAgua").hidden = !s.blocked_no_water;
 
   const connDot = el("connDot");
   const connText = el("connText");

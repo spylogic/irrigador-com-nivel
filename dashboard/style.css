@@ -227,6 +227,10 @@ body {
   font-size: 0.9rem;
 }
 
+.alerta.alerta-info {
+  color: var(--good);
+}
+
 #formHorarios,
 #formCaixa {
   display: flex;
