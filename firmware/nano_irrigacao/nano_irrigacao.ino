@@ -58,6 +58,14 @@
 // ---------------- Calibração da caixa d'água ----------------
 // Medidas informadas: altura útil = 25 cm, sensor montado 5 cm acima
 // do nível máximo de água (olhando pra baixo).
+//
+// IMPORTANTE: estas constantes são usadas SÓ para o cálculo de nível
+// mostrado aqui no Monitor Serial (debug local). O nível/volume que
+// aparece no DASHBOARD é calculado pelo ESP01, com as medidas que você
+// configura direto no site (card "Configuração da caixa d'água") - isso
+// permite reaproveitar este mesmo firmware em qualquer caixa d'água sem
+// precisar regravar o Nano. O Nano só manda a DISTÂNCIA BRUTA (cm) lida
+// pelo sensor; quem transforma isso em % e litros é o ESP01.
 const float SENSOR_ATE_NIVEL_MAX_CM = 5.0;   // distância do sensor até a água quando a caixa está CHEIA
 const float ALTURA_UTIL_CM          = 25.0;  // altura útil (nível máximo até o fundo)
 const float SENSOR_ATE_VAZIA_CM     = SENSOR_ATE_NIVEL_MAX_CM + ALTURA_UTIL_CM; // distância quando VAZIA (30 cm)
@@ -259,9 +267,11 @@ void loop() {
     bool bloqueadoSemAgua = comandoDesejado && !aguaPresente;
 
     // Monta e envia a linha de status pro ESP01:
-    // D:<nivel%>,<temp>,<umid>,<agua 0/1>,<rele 0/1>,<bloqueado 0/1>
+    // D:<distancia_bruta_cm>,<temp>,<umid>,<agua 0/1>,<rele 0/1>,<bloqueado 0/1>
+    // A distância bruta (sem transformar em %) é o que permite o ESP01
+    // calcular o nível usando as medidas configuradas no dashboard.
     espSerial.print("D:");
-    espSerial.print(nivelPct >= 0 ? nivelPct : -1, 1);
+    espSerial.print(distancia >= 0 ? distancia : -1, 1);
     espSerial.print(",");
     espSerial.print(dhtOk ? temperatura : -99, 1);
     espSerial.print(",");
@@ -274,8 +284,10 @@ void loop() {
     espSerial.print(bloqueadoSemAgua ? 1 : 0);
     espSerial.print("\n");
 
-    // Debug via USB
-    Serial.print(F("Nivel: ")); Serial.print(nivelPct);
+    // Debug via USB (nivel local, só para conferência - o dashboard usa o
+    // cálculo do ESP01 com as medidas configuradas no site)
+    Serial.print(F("Distancia: ")); Serial.print(distancia);
+    Serial.print(F("cm  Nivel(local): ")); Serial.print(nivelPct);
     Serial.print(F("%  Temp: ")); Serial.print(temperatura);
     Serial.print(F("  Umid: ")); Serial.print(umidade);
     Serial.print(F("  Agua: ")); Serial.print(aguaPresente);
