@@ -61,8 +61,20 @@ body {
   gap: 8px;
 }
 
+.title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .topbar h1 {
   font-size: 1.4rem;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
   margin: 0;
 }
 
